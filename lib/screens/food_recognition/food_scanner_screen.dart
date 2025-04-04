@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/diet_provider.dart';
 import '../../models/food_item.dart';
+import '../../services/gemini_vision_service.dart';
 
 class FoodScannerScreen extends StatefulWidget {
   const FoodScannerScreen({super.key});
@@ -22,7 +23,10 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
   Future<void> _getImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: source);
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
 
       if (pickedFile != null) {
         setState(() {
@@ -49,20 +53,12 @@ class _FoodScannerScreenState extends State<FoodScannerScreen> {
     });
 
     try {
-      // In a real app, this would call an API with AI to analyze the food image
-      // For now, we'll simulate with a delay
-      await Future.delayed(const Duration(seconds: 2));
+      // Use Gemini Vision API to analyze the food image
+      final analyzedFood =
+          await GeminiVisionService.analyzeFoodImage(_imageFile!);
 
-      // Mock response - this would come from your Gemini Vision API in a real app
       setState(() {
-        _analyzedFood = FoodItem(
-          name: 'Grilled Chicken Salad',
-          calories: 320,
-          protein: 28,
-          carbs: 12,
-          fat: 18,
-          imageUrl: _imageFile!.path,
-        );
+        _analyzedFood = analyzedFood;
       });
 
       // Add to history
