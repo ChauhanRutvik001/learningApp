@@ -38,7 +38,9 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.green,
           visualDensity: VisualDensity.adaptivePlatformDensity,
-          textTheme: GoogleFonts.poppinsTextTheme(
+          fontFamily:
+              'Noto Sans', // Google's Noto fonts have good multi-language support
+          textTheme: GoogleFonts.notoSansTextTheme(
             Theme.of(context).textTheme,
           ),
         ),

@@ -22,6 +22,9 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
   DietaryPreference _selectedDietType = DietaryPreference.standard;
   final List<String> _allergies = [];
   bool _isLoading = false;
+  Gender _selectedGender = Gender.male;
+  String _selectedLanguage = 'English';
+  List<String> _availableLanguages = ['English', 'हिंदी', 'ગુજરાતી'];
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +117,45 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                // Gender selection
+                Text(
+                  'Gender',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<Gender>(
+                        value: Gender.male,
+                        groupValue: _selectedGender,
+                        title: Text('Male'),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedGender = value!;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<Gender>(
+                        value: Gender.female,
+                        groupValue: _selectedGender,
+                        title: Text('Female'),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedGender = value!;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // Diet goal selection
                 Text(
                   'Diet Goal',
@@ -137,6 +179,40 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
                 const SizedBox(height: 8),
                 _buildDietaryPreferenceSelector(),
                 const SizedBox(height: 32),
+
+                Text(
+                  'Language / भाषा / ભાષા',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _selectedLanguage,
+                      items: _availableLanguages.map((String language) {
+                        return DropdownMenuItem<String>(
+                          value: language,
+                          child: Text(language),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedLanguage = newValue!;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Generate plan button
                 ElevatedButton(
@@ -284,9 +360,11 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
           age: int.parse(_ageController.text),
           weight: double.parse(_weightController.text),
           height: double.parse(_heightController.text),
+          gender: _selectedGender,
           goal: _selectedGoal,
           dietaryPreference: _selectedDietType,
           allergies: _allergies,
+          language: _selectedLanguage, // Add the selected language
         );
 
         // Update profile in provider

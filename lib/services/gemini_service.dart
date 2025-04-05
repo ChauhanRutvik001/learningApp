@@ -6,17 +6,19 @@ import '../models/meal_plan.dart';
 import '../models/food_item.dart';
 
 class GeminiService {
-  // Update to the new API key
-  static const String apiKey = 'AIzaSyCuiM_7fsybhrBSE6DHYCsRsro2qStGabU';
+  // API key already correctly set
+  static const String apiKey = 'AIzaSyBwUnN3aDHbySQIApPli86kKwZWVSOuJ_0';
+
+  // Update to use the Gemini 2.0 Flash model
   static const String apiUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   static Future<MealPlan> generateMealPlan(UserProfile profile) async {
     try {
       // Create prompt based on user profile
       final prompt = _createDietPlanPrompt(profile);
 
-      // Create request body
+      // Create request body - use more specific instruction parameters
       final requestBody = {
         'contents': [
           {
@@ -26,19 +28,25 @@ class GeminiService {
           }
         ],
         'generationConfig': {
-          'temperature': 0.7,
+          'temperature':
+              0.3, // Lower temperature for more consistent formatting
           'topK': 40,
           'topP': 0.95,
           'maxOutputTokens': 1024,
         }
       };
 
-      // Make API request
-      final response = await http.post(
-        Uri.parse('$apiUrl?key=$apiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
+      // Make API request with timeout
+      final response = await http
+          .post(
+            Uri.parse('$apiUrl?key=$apiKey'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(requestBody),
+          )
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Request timed out'),
+          );
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
@@ -94,37 +102,76 @@ class GeminiService {
         ? 'Allergies: ${profile.allergies.join(", ")}'
         : 'No specific food allergies.';
 
+    // Calculate BMR and caloric needs
+    double bmr = 0;
+    if (profile.gender == Gender.male) {
+      bmr = 88.362 +
+          (13.397 * profile.weight) +
+          (4.799 * profile.height) -
+          (5.677 * profile.age);
+    } else {
+      bmr = 447.593 +
+          (9.247 * profile.weight) +
+          (3.098 * profile.height) -
+          (4.330 * profile.age);
+    }
+
+    // Adjust based on activity level (assuming moderate activity)
+    double calorieTarget = bmr * 1.55;
+
+    // Adjust based on goal
+    if (profile.goal == DietGoal.weightLoss) {
+      calorieTarget -= 500; // Deficit for weight loss
+    } else if (profile.goal == DietGoal.muscleGain) {
+      calorieTarget += 500; // Surplus for muscle gain
+    }
+
+    // Add language specific instructions
+    String languageInstructions = '';
+    if (profile.language == 'हिंदी') {
+      languageInstructions =
+          'Please provide the entire meal plan in Hindi language.';
+    } else if (profile.language == 'ગુજરાતી') {
+      languageInstructions =
+          'Please provide the entire meal plan in Gujarati language.';
+    } else {
+      languageInstructions = 'Please provide the meal plan in English.';
+    }
+
     return '''
     Create a personalized daily meal plan for a ${profile.age} year old individual with the following characteristics:
     - Height: ${profile.height} cm
     - Weight: ${profile.weight} kg
+    - Target daily calories: ${calorieTarget.toInt()} kcal
     - Dietary goal: $dietGoalText
     - Dietary preference: $dietTypeText
     - $allergiesText
 
-    Please provide a detailed meal plan including breakfast, lunch, dinner, and snacks with the following information for each food item:
-    1. Name of the dish/food
+    $languageInstructions
+
+    Please provide a detailed meal plan with specific portion sizes including breakfast, lunch, dinner, and snacks with the following information for each food item:
+    1. Name of the dish/food with exact portion size (e.g., "1 cup oatmeal" or "85g chicken breast")
     2. Calories (kcal)
     3. Protein (g)
     4. Carbs (g)
     5. Fat (g)
 
-    Format your response as follows:
+    Format your response STRICTLY as follows:
     BREAKFAST:
-    - [Food name], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
-    - [Food name], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+    - [Food name with portion], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+    - [Food name with portion], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
 
     LUNCH:
-    - [Food name], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+    - [Food name with portion], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
 
     DINNER:
-    - [Food name], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+    - [Food name with portion], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
 
     SNACKS:
-    - [Food name], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
+    - [Food name with portion], [calories] kcal, [protein]g protein, [carbs]g carbs, [fat]g fat
 
     NOTES:
-    [Any additional notes about the meal plan, such as hydration recommendations, meal timing, etc.]
+    [Any additional notes about the meal plan, hydration recommendations, or meal timing]
     ''';
   }
 
