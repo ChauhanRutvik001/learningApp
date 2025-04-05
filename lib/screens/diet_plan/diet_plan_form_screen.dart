@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/user_profile.dart';
 import '../../providers/diet_provider.dart';
+import '../../services/location_service.dart';
 
 class DietPlanFormScreen extends StatefulWidget {
   const DietPlanFormScreen({super.key});
@@ -25,6 +26,14 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
   Gender _selectedGender = Gender.male;
   String _selectedLanguage = 'English';
   List<String> _availableLanguages = ['English', 'हिंदी', 'ગુજરાતી'];
+  String? _userLocation;
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserLocation();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,6 +223,8 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                _buildLocationSection(),
+
                 // Generate plan button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _generateDietPlan,
@@ -365,6 +376,7 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
           dietaryPreference: _selectedDietType,
           allergies: _allergies,
           language: _selectedLanguage, // Add the selected language
+          location: _userLocation, // Add location to the profile
         );
 
         // Update profile in provider
@@ -393,6 +405,108 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
         }
       }
     }
+  }
+
+  Future<void> _getUserLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      final locationData = await LocationService.getCurrentLocation();
+
+      if (locationData['success']) {
+        setState(() {
+          _userLocation = locationData['formatted_location'];
+        });
+      } else {
+        setState(() {
+          _userLocation = null;
+        });
+
+        if (mounted) {
+          // Show a more specific error message
+          final errorMsg = locationData['message'] ?? 'Failed to get location';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: 'Try Again',
+                textColor: Colors.white,
+                onPressed: _getUserLocation,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _userLocation = null;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Location error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildLocationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your Location',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: _isLoadingLocation
+              ? const Center(child: CircularProgressIndicator())
+              : Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _userLocation ?? 'Location not available',
+                        style: GoogleFonts.poppins(),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _getUserLocation,
+                      tooltip: 'Refresh location',
+                    ),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 
   @override

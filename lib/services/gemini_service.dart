@@ -138,6 +138,15 @@ class GeminiService {
       languageInstructions = 'Please provide the meal plan in English.';
     }
 
+    // Add location context to the prompt
+    String locationContext = '';
+    if (profile.location != null && profile.location!.isNotEmpty) {
+      locationContext = '''
+      Please customize this meal plan with foods and dishes that are commonly available in ${profile.location}. 
+      Include local cuisine options where appropriate while still meeting the nutritional requirements.
+      ''';
+    }
+
     return '''
     Create a personalized daily meal plan for a ${profile.age} year old individual with the following characteristics:
     - Height: ${profile.height} cm
@@ -146,6 +155,8 @@ class GeminiService {
     - Dietary goal: $dietGoalText
     - Dietary preference: $dietTypeText
     - $allergiesText
+
+    $locationContext
 
     $languageInstructions
 

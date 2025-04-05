@@ -12,7 +12,8 @@ class UserProfile {
   final DietGoal goal;
   final DietaryPreference dietaryPreference;
   final List<String> allergies;
-  final String language; // Added language field
+  final String language;
+  final String? location; // Add location field
   final int targetCalories;
 
   UserProfile({
@@ -23,7 +24,8 @@ class UserProfile {
     required this.goal,
     required this.dietaryPreference,
     this.allergies = const [],
-    this.language = 'English', // Default to English
+    this.language = 'English',
+    this.location, // Optional location parameter
     this.targetCalories = 0,
   });
 }
