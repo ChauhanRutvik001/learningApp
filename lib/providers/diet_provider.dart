@@ -4,29 +4,20 @@ import '../models/food_item.dart';
 import '../models/user_profile.dart';
 import '../services/gemini_service.dart';
 
-class DietProvider extends ChangeNotifier {
+class DietProvider with ChangeNotifier {
   UserProfile? _userProfile;
   MealPlan? _currentMealPlan;
   List<FoodItem> _scannedFoodHistory = [];
   bool _isGenerating = false;
-  String _sessionId = DateTime.now().toIso8601String(); // Add session tracking
 
   UserProfile? get userProfile => _userProfile;
   MealPlan? get currentMealPlan => _currentMealPlan;
   List<FoodItem> get scannedFoodHistory => _scannedFoodHistory;
   bool get isGenerating => _isGenerating;
-  String get sessionId => _sessionId; // Getter to force unique sessions
 
   // Update user profile
   void updateUserProfile(UserProfile profile) {
     _userProfile = profile;
-    notifyListeners();
-  }
-
-  // Reset session to force new content generation
-  void resetSession() {
-    _sessionId = DateTime.now().toIso8601String();
-    _currentMealPlan = null;
     notifyListeners();
   }
 
@@ -36,14 +27,18 @@ class DietProvider extends ChangeNotifier {
       throw Exception('User profile not set');
     }
 
+    _isGenerating = true;
+    notifyListeners();
+
     try {
-      // Pass session ID to ensure uniqueness
-      final mealPlan = await GeminiService.generateMealPlan(_userProfile!,
-          sessionId: _sessionId);
-      _currentMealPlan = mealPlan;
+      // Use the Gemini service to generate a meal plan based on user profile
+      _currentMealPlan = await GeminiService.generateMealPlan(_userProfile!);
+      _isGenerating = false;
       notifyListeners();
     } catch (e) {
-      rethrow;
+      _isGenerating = false;
+      notifyListeners();
+      rethrow; // Let the UI handle the error
     }
   }
 

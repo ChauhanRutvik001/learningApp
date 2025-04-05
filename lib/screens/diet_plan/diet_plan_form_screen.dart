@@ -13,6 +13,8 @@ class DietPlanFormScreen extends StatefulWidget {
 
 class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  // Form fields
   final _ageController = TextEditingController(text: '30');
   final _weightController = TextEditingController(text: '70');
   final _heightController = TextEditingController(text: '170');
@@ -21,323 +23,147 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
   final List<String> _allergies = [];
   bool _isLoading = false;
 
-  final List<String> _commonAllergies = [
-    'Dairy',
-    'Eggs',
-    'Peanuts',
-    'Tree nuts',
-    'Soy',
-    'Wheat',
-    'Shellfish',
-    'Fish',
-    'Sesame'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Load existing profile if available
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dietProvider = Provider.of<DietProvider>(context, listen: false);
-      if (dietProvider.userProfile != null) {
-        _ageController.text = dietProvider.userProfile!.age.toString();
-        _weightController.text = dietProvider.userProfile!.weight.toString();
-        _heightController.text = dietProvider.userProfile!.height.toString();
-        setState(() {
-          _selectedGoal = dietProvider.userProfile!.goal;
-          _selectedDietType = dietProvider.userProfile!.dietaryPreference;
-          _allergies.clear();
-          _allergies.addAll(dietProvider.userProfile!.allergies);
-        });
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Personalize Your Diet',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        elevation: 0,
+        title: const Text('Create Diet Plan'),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).primaryColor.withOpacity(0.05),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Progress indicator for form sections
-                  LinearProgressIndicator(
-                    value: 0.2, // Update this as user completes sections
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).primaryColor,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Personal Information',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Age field
+                TextFormField(
+                  controller: _ageController,
+                  decoration: InputDecoration(
+                    labelText: 'Age',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your age';
+                    }
+                    if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                      return 'Please enter a valid age';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
 
-                  const SizedBox(height: 24),
+                // Weight field
+                TextFormField(
+                  controller: _weightController,
+                  decoration: InputDecoration(
+                    labelText: 'Weight (kg)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your weight';
+                    }
+                    if (double.tryParse(value) == null ||
+                        double.parse(value) <= 0) {
+                      return 'Please enter a valid weight';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
 
-                  // Basic Info Section
-                  _buildSectionHeading(
-                      'Your Information', Icons.person_outline),
+                // Height field
+                TextFormField(
+                  controller: _heightController,
+                  decoration: InputDecoration(
+                    labelText: 'Height (cm)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your height';
+                    }
+                    if (double.tryParse(value) == null ||
+                        double.parse(value) <= 0) {
+                      return 'Please enter a valid height';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
 
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 24),
-                    elevation: 2,
+                // Diet goal selection
+                Text(
+                  'Diet Goal',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildDietGoalSelector(),
+                const SizedBox(height: 24),
+
+                // Dietary preference selection
+                Text(
+                  'Dietary Preference',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildDietaryPreferenceSelector(),
+                const SizedBox(height: 32),
+
+                // Generate plan button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _generateDietPlan,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Theme.of(context).primaryColor,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildFormField(
-                            controller: _ageController,
-                            label: 'Age',
-                            hint: 'Years',
-                            icon: Icons.cake_outlined,
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your age';
-                              }
-                              final age = int.tryParse(value);
-                              if (age == null || age < 12 || age > 120) {
-                                return 'Please enter a valid age (12-120)';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildFormField(
-                            controller: _weightController,
-                            label: 'Weight',
-                            hint: 'kg',
-                            icon: Icons.fitness_center,
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your weight';
-                              }
-                              final weight = double.tryParse(value);
-                              if (weight == null ||
-                                  weight < 30 ||
-                                  weight > 250) {
-                                return 'Please enter a valid weight (30-250 kg)';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _buildFormField(
-                            controller: _heightController,
-                            label: 'Height',
-                            hint: 'cm',
-                            icon: Icons.height,
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your height';
-                              }
-                              final height = double.tryParse(value);
-                              if (height == null ||
-                                  height < 100 ||
-                                  height > 250) {
-                                return 'Please enter a valid height (100-250 cm)';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-
-                  // Diet Goal Section
-                  _buildSectionHeading('Your Goal', Icons.track_changes),
-
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 24),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: _buildDietGoalSelector(),
-                    ),
-                  ),
-
-                  // Dietary Preference Section
-                  _buildSectionHeading(
-                      'Dietary Preference', Icons.restaurant_menu),
-
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 24),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: _buildDietaryPreferenceSelector(),
-                    ),
-                  ),
-
-                  // Allergies Section
-                  _buildSectionHeading(
-                      'Allergies & Restrictions', Icons.warning_amber_rounded),
-
-                  Card(
-                    margin: const EdgeInsets.only(bottom: 32),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Select any allergies or foods to avoid:',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Generate Diet Plan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8.0,
-                            children: _commonAllergies.map((allergy) {
-                              final isSelected = _allergies.contains(allergy);
-                              return FilterChip(
-                                label: Text(allergy),
-                                selected: isSelected,
-                                checkmarkColor: Colors.white,
-                                selectedColor: Theme.of(context).primaryColor,
-                                labelStyle: GoogleFonts.poppins(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.black87,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                                ),
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      _allergies.add(allergy);
-                                    } else {
-                                      _allergies.remove(allergy);
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Generate Plan Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ),
-                      onPressed: _isLoading ? null : _generateDietPlan,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.restaurant),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Generate Meal Plan',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeading(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: Theme.of(context).primaryColor),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    required TextInputType keyboardType,
-    required String? Function(String?) validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-      ),
-      keyboardType: keyboardType,
-      validator: validator,
     );
   }
 
@@ -348,98 +174,44 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
           DietGoal.weightLoss,
           'Weight Loss',
           'Reduce caloric intake with balanced nutrition',
-          Icons.trending_down,
         ),
         _buildGoalOption(
           DietGoal.muscleGain,
           'Muscle Gain',
           'Increase protein and calories for muscle building',
-          Icons.fitness_center,
         ),
         _buildGoalOption(
           DietGoal.maintenance,
           'Maintenance',
           'Balanced diet to maintain current weight',
-          Icons.balance,
         ),
       ],
     );
   }
 
-  Widget _buildGoalOption(
-    DietGoal goal,
-    String title,
-    String description,
-    IconData icon,
-  ) {
-    final isSelected = _selectedGoal == goal;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: isSelected ? 2 : 0,
-      color: isSelected
-          ? Theme.of(context).primaryColor.withOpacity(0.1)
-          : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isSelected
-              ? Theme.of(context).primaryColor
-              : Colors.grey.shade300,
-          width: isSelected ? 2 : 1,
+  Widget _buildGoalOption(DietGoal goal, String title, String description) {
+    return RadioListTile<DietGoal>(
+      value: goal,
+      groupValue: _selectedGoal,
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
         ),
       ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedGoal = goal;
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade600,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: isSelected
-                            ? Theme.of(context).primaryColor
-                            : Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      description,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: Theme.of(context).primaryColor,
-                ),
-            ],
-          ),
+      subtitle: Text(
+        description,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
         ),
       ),
+      onChanged: (value) {
+        setState(() {
+          _selectedGoal = value!;
+        });
+      },
+      activeColor: Theme.of(context).primaryColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
 
@@ -450,110 +222,55 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
           DietaryPreference.standard,
           'Standard',
           'No specific restrictions',
-          Icons.restaurant,
         ),
         _buildDietaryOption(
           DietaryPreference.vegetarian,
           'Vegetarian',
           'No meat, includes dairy and eggs',
-          Icons.egg_alt,
         ),
         _buildDietaryOption(
           DietaryPreference.vegan,
           'Vegan',
           'No animal products',
-          Icons.spa,
         ),
         _buildDietaryOption(
           DietaryPreference.keto,
           'Keto',
           'Low carb, high fat',
-          Icons.no_food,
         ),
         _buildDietaryOption(
           DietaryPreference.paleo,
           'Paleo',
           'Based on foods available in paleolithic era',
-          Icons.eco,
         ),
       ],
     );
   }
 
   Widget _buildDietaryOption(
-    DietaryPreference preference,
-    String title,
-    String description,
-    IconData icon,
-  ) {
-    final isSelected = _selectedDietType == preference;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: isSelected ? 2 : 0,
-      color: isSelected
-          ? Theme.of(context).primaryColor.withOpacity(0.1)
-          : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isSelected
-              ? Theme.of(context).primaryColor
-              : Colors.grey.shade300,
-          width: isSelected ? 2 : 1,
+      DietaryPreference preference, String title, String description) {
+    return RadioListTile<DietaryPreference>(
+      value: preference,
+      groupValue: _selectedDietType,
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600,
         ),
       ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedDietType = preference;
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade600,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: isSelected
-                            ? Theme.of(context).primaryColor
-                            : Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      description,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: Theme.of(context).primaryColor,
-                ),
-            ],
-          ),
+      subtitle: Text(
+        description,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
         ),
       ),
+      onChanged: (value) {
+        setState(() {
+          _selectedDietType = value!;
+        });
+      },
+      activeColor: Theme.of(context).primaryColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
 
@@ -562,9 +279,6 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
       setState(() => _isLoading = true);
 
       try {
-        print('🔵 GENERATING DIET PLAN 🔵');
-        print('---------------------------------------------');
-
         // Create user profile from form data
         final userProfile = UserProfile(
           age: int.parse(_ageController.text),
@@ -575,36 +289,18 @@ class _DietPlanFormScreenState extends State<DietPlanFormScreen> {
           allergies: _allergies,
         );
 
-        // Print the user profile
-        print('👤 USER PROFILE: ');
-        print('  Age: ${userProfile.age} years');
-        print('  Weight: ${userProfile.weight} kg');
-        print('  Height: ${userProfile.height} cm');
-        print('  Goal: ${userProfile.goal}');
-        print('  Diet Type: ${userProfile.dietaryPreference}');
-        print(
-            '  Allergies: ${userProfile.allergies.isEmpty ? "None" : userProfile.allergies.join(", ")}');
-        print('---------------------------------------------');
-
         // Update profile in provider
         final dietProvider = Provider.of<DietProvider>(context, listen: false);
         dietProvider.updateUserProfile(userProfile);
 
-        print('📝 Sending request to generate meal plan...');
-
         // Generate the meal plan
         await dietProvider.generateMealPlan();
 
-        print('✅ Meal plan generated successfully!');
-        print('---------------------------------------------');
-
         if (mounted) {
-          // Navigate to meal plan screen
+          // Navigate to meal plan screen - this line was incomplete
           Navigator.pushNamed(context, '/meal-plan');
         }
       } catch (e) {
-        print('❌ ERROR GENERATING MEAL PLAN: $e');
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
