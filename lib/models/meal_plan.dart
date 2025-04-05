@@ -5,7 +5,7 @@ class MealPlan {
   final List<FoodItem> lunch;
   final List<FoodItem> dinner;
   final List<FoodItem> snacks;
-  final String? notes;
+  final String? notes; // Mark as nullable with ?
 
   MealPlan({
     required this.breakfast,
