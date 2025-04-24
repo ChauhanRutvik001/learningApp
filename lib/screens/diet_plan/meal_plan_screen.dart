@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/diet_provider.dart';
 import '../../models/meal_plan.dart';
 import '../../models/food_item.dart';
+import 'saved_diet_plans_screen.dart';
 
 class MealPlanScreen extends StatelessWidget {
   const MealPlanScreen({super.key});
@@ -27,6 +28,107 @@ class MealPlanScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Meal Plan'),
+        actions: [
+          // Add save button to app bar
+          IconButton(
+            icon: const Icon(Icons.save),
+            tooltip: 'Save Diet Plan',
+            onPressed: () async {
+              // Show loading dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (BuildContext context) {
+                  return const AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 20),
+                        Text("Saving diet plan..."),
+                      ],
+                    ),
+                  );
+                },
+              );
+
+              try {
+                // Save meal plan using the provider
+                String? savedId = await dietProvider.saveMealPlan();
+                
+                // Pop loading dialog
+                Navigator.pop(context);
+                
+                if (savedId != null) {
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Diet plan saved successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  // Ask user if they want to view saved plans
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Diet Plan Saved'),
+                      content: const Text('Would you like to view your saved diet plans?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Not Now'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SavedDietPlansScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text('View Saved Plans'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to save diet plan. Please try again.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Pop loading dialog and show error
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+          
+          // Add button to view saved plans
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'View Saved Plans',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SavedDietPlansScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
